@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Recompensas</title>
+    <title>Sistema de Recompensas Ecológico</title>
     <style>
         * {
             margin: 0;
@@ -297,12 +297,53 @@
         }
 
         .reward-card {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
             color: white;
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             position: relative;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .reward-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        .reward-card.selected {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            border: 3px solid #fff;
+            box-shadow: 0 8px 20px rgba(17, 153, 142, 0.4);
+        }
+
+        .reward-card.selected::before {
+            content: '★ MI META';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.3);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .reward-card.confirmed {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+
+        .reward-card.confirmed::before {
+            content: '✓ CONFIRMADA POR ADMIN';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.4);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: bold;
         }
 
         .reward-card.achieved {
@@ -461,6 +502,12 @@
             margin: 5px;
         }
 
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
         @media (max-width: 768px) {
             .auth-container {
                 padding: 30px 20px;
@@ -505,7 +552,7 @@
     <div class="container">
         <!-- Pantalla de Autenticación -->
         <div id="authScreen" class="auth-container">
-            <h1>Recicla y Gana</h1>
+            <h1>Sistema Ecológico</h1>
             
             <div id="registerForm">
                 <h2>Crear Cuenta</h2>
@@ -572,7 +619,9 @@
 
             <div class="rewards-section">
                 <h2>Recompensas Disponibles</h2>
-                <div class="rewards-grid" id="rewardsGrid"></div>
+                <div class="rewards-grid" id="rewardsGrid">
+                    <div class="loading">Cargando recompensas...</div>
+                </div>
             </div>
         </div>
 
@@ -601,7 +650,9 @@
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="usersTable"></tbody>
+                    <tbody id="usersTable">
+                        <tr><td colspan="5" class="loading">Cargando usuarios...</td></tr>
+                    </tbody>
                 </table>
             </div>
 
@@ -630,45 +681,82 @@
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="rewardsTable"></tbody>
+                    <tbody id="rewardsTable">
+                        <tr><td colspan="3" class="loading">Cargando recompensas...</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get, update, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9Cx9tvYsRZCuz3Xum24EIUz0jzDlINYs",
+            authDomain: "sistemausuarios-53f3d.firebaseapp.com",
+            projectId: "sistemausuarios-53f3d",
+            storageBucket: "sistemausuarios-53f3d.firebasestorage.app",
+            messagingSenderId: "856270150387",
+            appId: "1:856270150387:web:dd6a36aeaff4e34adb3586",
+            measurementId: "G-QFLZWERBRN",
+            databaseURL: "https://sistemausuarios-53f3d-default-rtdb.firebaseio.com"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Variables globales
+        window.users = {};
+        window.rewards = [];
+        window.currentUser = null;
+        window.isAdmin = false;
+        window.database = database;
+
+        // Cargar usuarios en tiempo real
+        const usersRef = ref(database, 'users');
+        onValue(usersRef, (snapshot) => {
+            const data = snapshot.val();
+            window.users = data || {};
+            
+            // Actualizar vistas si están activas
+            if (window.isAdmin && !document.getElementById('adminDashboard').classList.contains('hidden')) {
+                loadUsersTable();
+            }
+        });
+
+        // Cargar recompensas en tiempo real
+        const rewardsRef = ref(database, 'rewards');
+        onValue(rewardsRef, (snapshot) => {
+            const data = snapshot.val();
+            window.rewards = data ? Object.values(data) : [];
+            
+            // Actualizar vistas si están activas
+            if (window.currentUser && !document.getElementById('userDashboard').classList.contains('hidden')) {
+                loadRewards();
+            }
+            if (window.isAdmin && !document.getElementById('rewardsSection').classList.contains('hidden')) {
+                loadRewardsTable();
+            }
+        });
+
+        // Hacer funciones disponibles globalmente
+        window.firebaseReady = true;
+    </script>
+
     <script>
-        // Base de datos en memoria
-        let users = {};
-        let rewards = [];
-        let currentUser = null;
-        let isAdmin = false;
-
-        // Cargar datos al iniciar
-        function loadData() {
-            const savedUsers = localStorage.getItem('ecoSystemUsers');
-            const savedRewards = localStorage.getItem('ecoSystemRewards');
-            
-            if (savedUsers) {
-                users = JSON.parse(savedUsers);
-            }
-            
-            if (savedRewards) {
-                rewards = JSON.parse(savedRewards);
+        // Esperar a que Firebase esté listo
+        function waitForFirebase(callback) {
+            if (window.firebaseReady) {
+                callback();
+            } else {
+                setTimeout(() => waitForFirebase(callback), 100);
             }
         }
-
-        // Guardar usuarios
-        function saveUsers() {
-            localStorage.setItem('ecoSystemUsers', JSON.stringify(users));
-        }
-
-        // Guardar recompensas
-        function saveRewards() {
-            localStorage.setItem('ecoSystemRewards', JSON.stringify(rewards));
-        }
-
-        // Inicializar datos al cargar la página
-        window.addEventListener('load', loadData);
 
         // Generar código único
         function generateCode() {
@@ -697,14 +785,8 @@
             document.getElementById('adminLoginForm').classList.add('hidden');
         }
 
-        function showAdminLogin() {
-            document.getElementById('registerForm').classList.add('hidden');
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('adminLoginForm').classList.remove('hidden');
-        }
-
         // Registro de usuario
-        function register() {
+        async function register() {
             const username = document.getElementById('regUsername').value.trim();
             
             if (!username) {
@@ -713,7 +795,7 @@
             }
 
             const code = generateCode();
-            users[code] = {
+            const userData = {
                 username: username,
                 code: code,
                 points: 0,
@@ -722,29 +804,34 @@
                 confirmedRewards: []
             };
 
-            // Guardar en localStorage
-            saveUsers();
-
-            // Copiar código al portapapeles
-            navigator.clipboard.writeText(code).then(() => {
-                showNotification('¡Código copiado al portapapeles!');
-            }).catch(() => {
-                showNotification('¡Cuenta creada exitosamente!');
-            });
-            
-            // Mostrar código
-            const codeDisplay = document.createElement('div');
-            codeDisplay.className = 'code-display';
-            codeDisplay.innerHTML = `Tu código es:<br>${code}<br><small style="font-size: 14px;">Copiado al portapapeles - Guárdalo para iniciar sesión</small>`;
-            document.getElementById('registerForm').appendChild(codeDisplay);
-            
-            // Limpiar campo
-            document.getElementById('regUsername').value = '';
-            
-            setTimeout(() => {
-                codeDisplay.remove();
-                showLogin();
-            }, 5000);
+            try {
+                const { ref, set } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await set(ref(window.database, 'users/' + code), userData);
+                
+                // Copiar código al portapapeles
+                navigator.clipboard.writeText(code).then(() => {
+                    showNotification('¡Código copiado al portapapeles!');
+                }).catch(() => {
+                    showNotification('¡Cuenta creada exitosamente!');
+                });
+                
+                // Mostrar código
+                const codeDisplay = document.createElement('div');
+                codeDisplay.className = 'code-display';
+                codeDisplay.innerHTML = `Tu código es:<br>${code}<br><small style="font-size: 14px;">Copiado al portapapeles - Guárdalo para iniciar sesión</small>`;
+                document.getElementById('registerForm').appendChild(codeDisplay);
+                
+                // Limpiar campo
+                document.getElementById('regUsername').value = '';
+                
+                setTimeout(() => {
+                    codeDisplay.remove();
+                    showLogin();
+                }, 5000);
+            } catch (error) {
+                console.error('Error al registrar:', error);
+                showNotification('Error al crear cuenta. Intenta nuevamente.');
+            }
         }
 
         // Inicio de sesión
@@ -754,20 +841,20 @@
             // Verificar si es el código de admin
             if (code === 'ADMIN2024') {
                 document.getElementById('loginCode').value = '';
-                isAdmin = true;
-                currentUser = null;
+                window.isAdmin = true;
+                window.currentUser = null;
                 showAdminDashboard();
                 return;
             }
             
-            if (!users[code]) {
+            if (!window.users[code]) {
                 showNotification('Código inválido');
                 return;
             }
 
             document.getElementById('loginCode').value = '';
-            currentUser = users[code];
-            isAdmin = false;
+            window.currentUser = window.users[code];
+            window.isAdmin = false;
             showUserDashboard();
         }
 
@@ -781,21 +868,16 @@
             }
 
             document.getElementById('adminCode').value = '';
-            isAdmin = true;
-            currentUser = null;
+            window.isAdmin = true;
+            window.currentUser = null;
             showAdminDashboard();
-        }
-
-        // Función eliminada - ya no se necesita
-        function showAdminLogin() {
-            // Esta función ya no se usa
         }
 
         // Mostrar dashboard de usuario
         function showUserDashboard() {
             document.getElementById('authScreen').classList.add('hidden');
             document.getElementById('userDashboard').classList.remove('hidden');
-            document.getElementById('userName').textContent = currentUser.username;
+            document.getElementById('userName').textContent = window.currentUser.username;
             updateUserPoints();
             loadRewards();
         }
@@ -810,12 +892,12 @@
 
         // Actualizar puntos del usuario
         function updateUserPoints() {
-            document.getElementById('userPoints').textContent = currentUser.points.toFixed(2);
-            loadRewards(); // Actualizar estado de recompensas
+            document.getElementById('userPoints').textContent = window.currentUser.points.toFixed(2);
+            loadRewards();
         }
 
         // Agregar puntos
-        function addPoints() {
+        async function addPoints() {
             const amount = parseFloat(document.getElementById('addAmount').value);
             
             if (isNaN(amount) || amount <= 0) {
@@ -823,20 +905,27 @@
                 return;
             }
 
-            currentUser.originalAmount += amount;
-            currentUser.points += (amount * 10);
-            
-            // Actualizar en el objeto users
-            users[currentUser.code] = currentUser;
-            saveUsers();
-            
-            updateUserPoints();
-            document.getElementById('addAmount').value = '';
-            showNotification(`¡${(amount * 10).toFixed(2)} puntos agregados!`);
+            window.currentUser.originalAmount += amount;
+            window.currentUser.points += (amount * 10);
+
+            try {
+                const { ref, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await update(ref(window.database, 'users/' + window.currentUser.code), {
+                    points: window.currentUser.points,
+                    originalAmount: window.currentUser.originalAmount
+                });
+                
+                updateUserPoints();
+                document.getElementById('addAmount').value = '';
+                showNotification(`¡${(amount * 10).toFixed(2)} puntos agregados!`);
+            } catch (error) {
+                console.error('Error al agregar puntos:', error);
+                showNotification('Error al agregar puntos. Intenta nuevamente.');
+            }
         }
 
         // Eliminar puntos
-        function removePoints() {
+        async function removePoints() {
             const amount = parseFloat(document.getElementById('removeAmount').value);
             
             if (isNaN(amount) || amount <= 0) {
@@ -844,21 +933,28 @@
                 return;
             }
 
-            if (amount > currentUser.originalAmount) {
+            if (amount > window.currentUser.originalAmount) {
                 showNotification('No tiene suficiente cantidad registrada');
                 return;
             }
 
-            currentUser.originalAmount -= amount;
-            currentUser.points -= (amount * 10);
-            
-            // Actualizar en el objeto users
-            users[currentUser.code] = currentUser;
-            saveUsers();
-            
-            updateUserPoints();
-            document.getElementById('removeAmount').value = '';
-            showNotification(`${(amount * 10).toFixed(2)} puntos eliminados`);
+            window.currentUser.originalAmount -= amount;
+            window.currentUser.points -= (amount * 10);
+
+            try {
+                const { ref, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await update(ref(window.database, 'users/' + window.currentUser.code), {
+                    points: window.currentUser.points,
+                    originalAmount: window.currentUser.originalAmount
+                });
+                
+                updateUserPoints();
+                document.getElementById('removeAmount').value = '';
+                showNotification(`${(amount * 10).toFixed(2)} puntos eliminados`);
+            } catch (error) {
+                console.error('Error al eliminar puntos:', error);
+                showNotification('Error al eliminar puntos. Intenta nuevamente.');
+            }
         }
 
         // Cargar recompensas en vista de usuario
@@ -866,16 +962,16 @@
             const grid = document.getElementById('rewardsGrid');
             grid.innerHTML = '';
             
-            if (rewards.length === 0) {
+            if (window.rewards.length === 0) {
                 grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #666;">No hay recompensas disponibles</p>';
                 return;
             }
 
-            rewards.forEach(reward => {
+            window.rewards.forEach(reward => {
                 const card = document.createElement('div');
-                const achieved = currentUser.points >= reward.price;
-                const isSelected = currentUser.selectedReward === reward.id;
-                const isConfirmed = currentUser.confirmedRewards.includes(reward.id);
+                const achieved = window.currentUser.points >= reward.price;
+                const isSelected = window.currentUser.selectedReward === reward.id;
+                const isConfirmed = window.currentUser.confirmedRewards && window.currentUser.confirmedRewards.includes(reward.id);
                 
                 let cardClass = 'reward-card';
                 if (isConfirmed) {
@@ -888,12 +984,11 @@
                 
                 card.className = cardClass;
                 
-                // Solo permitir selección si no está confirmada
                 if (!isConfirmed) {
                     card.onclick = () => selectReward(reward.id);
                 }
                 
-                const remaining = achieved ? 0 : reward.price - currentUser.points;
+                const remaining = achieved ? 0 : reward.price - window.currentUser.points;
                 let statusText = '';
                 
                 if (isConfirmed) {
@@ -918,26 +1013,31 @@
         }
 
         // Seleccionar recompensa como meta
-        function selectReward(rewardId) {
-            // Verificar si ya está confirmada
-            if (currentUser.confirmedRewards.includes(rewardId)) {
+        async function selectReward(rewardId) {
+            if (window.currentUser.confirmedRewards && window.currentUser.confirmedRewards.includes(rewardId)) {
                 showNotification('Esta recompensa ya fue confirmada');
                 return;
             }
             
-            if (currentUser.selectedReward === rewardId) {
-                currentUser.selectedReward = null;
+            if (window.currentUser.selectedReward === rewardId) {
+                window.currentUser.selectedReward = null;
                 showNotification('Meta deseleccionada');
             } else {
-                currentUser.selectedReward = rewardId;
+                window.currentUser.selectedReward = rewardId;
                 showNotification('¡Meta seleccionada! El admin podrá confirmarla cuando la alcances');
             }
             
-            // Actualizar en el objeto users
-            users[currentUser.code] = currentUser;
-            saveUsers();
-            
-            loadRewards();
+            try {
+                const { ref, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await update(ref(window.database, 'users/' + window.currentUser.code), {
+                    selectedReward: window.currentUser.selectedReward
+                });
+                
+                loadRewards();
+            } catch (error) {
+                console.error('Error al seleccionar meta:', error);
+                showNotification('Error al seleccionar meta. Intenta nuevamente.');
+            }
         }
 
         // Cargar tabla de usuarios (admin)
@@ -945,16 +1045,22 @@
             const tbody = document.getElementById('usersTable');
             tbody.innerHTML = '';
 
-            Object.values(users).forEach(user => {
+            const usersList = Object.values(window.users);
+            
+            if (usersList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay usuarios registrados</td></tr>';
+                return;
+            }
+
+            usersList.forEach(user => {
                 const row = document.createElement('tr');
                 
                 let goalInfo = 'Sin meta';
                 let confirmButton = '';
                 
-                // Mostrar recompensas confirmadas
                 if (user.confirmedRewards && user.confirmedRewards.length > 0) {
                     const confirmedNames = user.confirmedRewards.map(id => {
-                        const reward = rewards.find(r => r.id === id);
+                        const reward = window.rewards.find(r => r.id === id);
                         return reward ? reward.name : '';
                     }).filter(name => name).join(', ');
                     if (confirmedNames) {
@@ -962,12 +1068,11 @@
                     }
                 }
                 
-                // Mostrar meta actual
                 if (user.selectedReward) {
-                    const reward = rewards.find(r => r.id === user.selectedReward);
+                    const reward = window.rewards.find(r => r.id === user.selectedReward);
                     if (reward) {
                         const achieved = user.points >= reward.price;
-                        const isConfirmed = user.confirmedRewards.includes(reward.id);
+                        const isConfirmed = user.confirmedRewards && user.confirmedRewards.includes(reward.id);
                         
                         if (!isConfirmed) {
                             if (achieved) {
@@ -1000,14 +1105,14 @@
         }
 
         // Confirmar recompensa del usuario
-        function confirmReward(code) {
-            const user = users[code];
+        async function confirmReward(code) {
+            const user = window.users[code];
             if (!user.selectedReward) {
                 showNotification('El usuario no tiene una meta seleccionada');
                 return;
             }
             
-            const reward = rewards.find(r => r.id === user.selectedReward);
+            const reward = window.rewards.find(r => r.id === user.selectedReward);
             if (!reward) {
                 showNotification('Recompensa no encontrada');
                 return;
@@ -1018,39 +1123,46 @@
                 return;
             }
             
-            // Agregar a recompensas confirmadas
             if (!user.confirmedRewards) {
                 user.confirmedRewards = [];
             }
             user.confirmedRewards.push(user.selectedReward);
-            
-            // Limpiar meta actual para que pueda seleccionar otra
             user.selectedReward = null;
-            
-            // Guardar cambios
-            saveUsers();
-            
-            loadUsersTable();
-            showNotification(`¡Meta de ${user.username} confirmada! Puede seleccionar una nueva meta`);
-        }
 
-        // Confirmar usuario (notificación)
-        function confirmUser(code) {
-            showNotification(`Usuario ${users[code].username} confirmado`);
+            try {
+                const { ref, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await update(ref(window.database, 'users/' + code), {
+                    confirmedRewards: user.confirmedRewards,
+                    selectedReward: null
+                });
+                
+                loadUsersTable();
+                showNotification(`¡Meta de ${user.username} confirmada! Puede seleccionar una nueva meta`);
+            } catch (error) {
+                console.error('Error al confirmar meta:', error);
+                showNotification('Error al confirmar meta. Intenta nuevamente.');
+            }
         }
 
         // Eliminar usuario
-        function deleteUser(code) {
-            if (confirm(`¿Está seguro de eliminar al usuario ${users[code].username}?`)) {
-                const username = users[code].username;
-                delete users[code];
-                loadUsersTable();
-                showNotification(`Usuario ${username} eliminado correctamente`);
+        async function deleteUser(code) {
+            if (confirm(`¿Está seguro de eliminar al usuario ${window.users[code].username}?`)) {
+                const username = window.users[code].username;
+                
+                try {
+                    const { ref, remove } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                    await remove(ref(window.database, 'users/' + code));
+                    
+                    showNotification(`Usuario ${username} eliminado correctamente`);
+                } catch (error) {
+                    console.error('Error al eliminar usuario:', error);
+                    showNotification('Error al eliminar usuario. Intenta nuevamente.');
+                }
             }
         }
 
         // Agregar recompensa
-        function addReward() {
+        async function addReward() {
             const name = document.getElementById('rewardName').value.trim();
             const price = parseInt(document.getElementById('rewardPrice').value);
 
@@ -1059,16 +1171,24 @@
                 return;
             }
 
-            rewards.push({
-                id: Date.now(),
+            const rewardId = Date.now();
+            const rewardData = {
+                id: rewardId,
                 name: name,
                 price: price
-            });
+            };
 
-            document.getElementById('rewardName').value = '';
-            document.getElementById('rewardPrice').value = '';
-            loadRewardsTable();
-            showNotification('Recompensa agregada exitosamente');
+            try {
+                const { ref, set } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await set(ref(window.database, 'rewards/' + rewardId), rewardData);
+
+                document.getElementById('rewardName').value = '';
+                document.getElementById('rewardPrice').value = '';
+                showNotification('Recompensa agregada exitosamente');
+            } catch (error) {
+                console.error('Error al agregar recompensa:', error);
+                showNotification('Error al agregar recompensa. Intenta nuevamente.');
+            }
         }
 
         // Cargar tabla de recompensas
@@ -1076,7 +1196,12 @@
             const tbody = document.getElementById('rewardsTable');
             tbody.innerHTML = '';
 
-            rewards.forEach(reward => {
+            if (window.rewards.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No hay recompensas registradas</td></tr>';
+                return;
+            }
+
+            window.rewards.forEach(reward => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${reward.name}</td>
@@ -1090,10 +1215,16 @@
         }
 
         // Eliminar recompensa
-        function deleteReward(id) {
-            rewards = rewards.filter(r => r.id !== id);
-            loadRewardsTable();
-            showNotification('Recompensa eliminada');
+        async function deleteReward(id) {
+            try {
+                const { ref, remove } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await remove(ref(window.database, 'rewards/' + id));
+                
+                showNotification('Recompensa eliminada');
+            } catch (error) {
+                console.error('Error al eliminar recompensa:', error);
+                showNotification('Error al eliminar recompensa. Intenta nuevamente.');
+            }
         }
 
         // Cambiar sección del admin
@@ -1114,8 +1245,8 @@
 
         // Cerrar sesión
         function logout() {
-            currentUser = null;
-            isAdmin = false;
+            window.currentUser = null;
+            window.isAdmin = false;
             document.getElementById('authScreen').classList.remove('hidden');
             document.getElementById('userDashboard').classList.add('hidden');
             document.getElementById('adminDashboard').classList.add('hidden');
