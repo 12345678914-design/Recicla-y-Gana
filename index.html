@@ -92,6 +92,10 @@
             margin: 0 auto;
             position: relative;
             z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
         }
 
         .auth-container {
@@ -100,7 +104,7 @@
             padding: 40px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             max-width: 400px;
-            margin: 100px auto;
+            width: 100%;
             position: relative;
             overflow: hidden;
         }
@@ -142,6 +146,7 @@
         }
 
         input[type="text"],
+        input[type="password"],
         input[type="number"] {
             width: 100%;
             padding: 12px;
@@ -151,9 +156,39 @@
             transition: border 0.3s;
         }
 
+        input[type="password"] {
+            padding-right: 45px;
+        }
+
         input:focus {
             outline: none;
             border-color: #28a745;
+        }
+
+        .password-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: auto;
+            padding: 5px 10px;
+            margin: 0;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            border: none;
+            font-size: 18px;
+        }
+
+        .toggle-password:hover {
+            background: transparent;
+            color: #28a745;
         }
 
         button {
@@ -558,7 +593,14 @@
                 <h2>Crear Cuenta</h2>
                 <div class="form-group">
                     <label>Nombre de Usuario</label>
-                    <input type="text" id="regUsername" placeholder="Ingrese su nombre">
+                    <input type="text" id="regUsername" placeholder="Ingrese su nombre de usuario">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <div class="password-container">
+                        <input type="password" id="regPassword" placeholder="Ingrese su contraseña">
+                        <button type="button" class="toggle-password" onclick="togglePassword('regPassword', this)">👁️</button>
+                    </div>
                 </div>
                 <button onclick="register()">Crear Cuenta</button>
                 <button class="secondary-btn" onclick="showLogin()">Ya tengo cuenta</button>
@@ -567,8 +609,15 @@
             <div id="loginForm" class="hidden">
                 <h2>Iniciar Sesión</h2>
                 <div class="form-group">
-                    <label>Código de Usuario</label>
-                    <input type="text" id="loginCode" placeholder="Ingrese su código">
+                    <label>Nombre de Usuario</label>
+                    <input type="text" id="loginUsername" placeholder="Ingrese su nombre de usuario">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <div class="password-container">
+                        <input type="password" id="loginPassword" placeholder="Ingrese su contraseña">
+                        <button type="button" class="toggle-password" onclick="togglePassword('loginPassword', this)">👁️</button>
+                    </div>
                 </div>
                 <button onclick="login()">Iniciar Sesión</button>
                 <button class="secondary-btn" onclick="showRegister()">Crear nueva cuenta</button>
@@ -578,7 +627,10 @@
                 <h2>Acceso Administrador</h2>
                 <div class="form-group">
                     <label>Código Admin</label>
-                    <input type="text" id="adminCode" placeholder="Ingrese código de administrador">
+                    <div class="password-container">
+                        <input type="password" id="adminCode" placeholder="Ingrese código de administrador">
+                        <button type="button" class="toggle-password" onclick="togglePassword('adminCode', this)">👁️</button>
+                    </div>
                 </div>
                 <button onclick="adminLogin()">Acceder</button>
                 <button class="secondary-btn" onclick="showLogin()">Volver</button>
@@ -608,12 +660,15 @@
                 </div>
 
                 <div class="action-card">
-                    <h3>Eliminar Puntos</h3>
+                    <h3>Editar Cantidad Original</h3>
                     <div class="form-group">
-                        <label>Cantidad</label>
-                        <input type="number" id="removeAmount" placeholder="0.00" step="0.01">
+                        <label>Nueva Cantidad Original</label>
+                        <input type="number" id="editAmount" placeholder="0.00" step="0.01">
                     </div>
-                    <button class="danger-btn" onclick="removePoints()">Eliminar</button>
+                    <button class="success-btn" onclick="editOriginalAmount()">Actualizar Cantidad</button>
+                    <p style="margin-top: 10px; font-size: 14px; color: #666;">
+                        Cantidad actual: <strong id="currentAmount">0.00</strong>
+                    </p>
                 </div>
             </div>
 
@@ -644,14 +699,13 @@
                     <thead>
                         <tr>
                             <th>Nombre</th>
-                            <th>Código</th>
                             <th>Puntos</th>
                             <th>Meta</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="usersTable">
-                        <tr><td colspan="5" class="loading">Cargando usuarios...</td></tr>
+                        <tr><td colspan="4" class="loading">Cargando usuarios...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -722,6 +776,7 @@
         onValue(usersRef, (snapshot) => {
             const data = snapshot.val();
             window.users = data || {};
+            console.log('Usuarios cargados:', window.users);
             
             // Actualizar vistas si están activas
             if (window.isAdmin && !document.getElementById('adminDashboard').classList.contains('hidden')) {
@@ -758,6 +813,18 @@
             }
         }
 
+        // Mostrar/ocultar contraseña
+        function togglePassword(inputId, button) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                button.textContent = '👁️';
+            }
+        }
+
         // Generar código único
         function generateCode() {
             return 'USR' + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -788,15 +855,34 @@
         // Registro de usuario
         async function register() {
             const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value.trim();
             
             if (!username) {
                 showNotification('Por favor ingrese un nombre de usuario');
                 return;
             }
 
+            if (!password) {
+                showNotification('Por favor ingrese una contraseña');
+                return;
+            }
+
+            if (password.length < 4) {
+                showNotification('La contraseña debe tener al menos 4 caracteres');
+                return;
+            }
+
+            // Verificar si el usuario ya existe
+            const existingUser = Object.values(window.users).find(u => u.username.toLowerCase() === username.toLowerCase());
+            if (existingUser) {
+                showNotification('Este nombre de usuario ya está registrado');
+                return;
+            }
+
             const code = generateCode();
             const userData = {
                 username: username,
+                password: password,
                 code: code,
                 points: 0,
                 originalAmount: 0,
@@ -805,55 +891,60 @@
             };
 
             try {
-                const { ref, set } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                await set(ref(window.database, 'users/' + code), userData);
+                const { ref: dbRef, set } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await set(dbRef(window.database, 'users/' + code), userData);
                 
-                // Copiar código al portapapeles
-                navigator.clipboard.writeText(code).then(() => {
-                    showNotification('¡Código copiado al portapapeles!');
-                }).catch(() => {
-                    showNotification('¡Cuenta creada exitosamente!');
-                });
+                showNotification('¡Cuenta creada exitosamente!');
                 
-                // Mostrar código
-                const codeDisplay = document.createElement('div');
-                codeDisplay.className = 'code-display';
-                codeDisplay.innerHTML = `Tu código es:<br>${code}<br><small style="font-size: 14px;">Copiado al portapapeles - Guárdalo para iniciar sesión</small>`;
-                document.getElementById('registerForm').appendChild(codeDisplay);
-                
-                // Limpiar campo
+                // Limpiar campos
                 document.getElementById('regUsername').value = '';
+                document.getElementById('regPassword').value = '';
                 
                 setTimeout(() => {
-                    codeDisplay.remove();
                     showLogin();
-                }, 5000);
+                }, 1500);
             } catch (error) {
                 console.error('Error al registrar:', error);
-                showNotification('Error al crear cuenta. Intenta nuevamente.');
+                showNotification('Error al crear cuenta: ' + error.message);
             }
         }
 
         // Inicio de sesión
         function login() {
-            const code = document.getElementById('loginCode').value.trim();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
             
-            // Verificar si es el código de admin
-            if (code === 'ADMIN2024') {
-                document.getElementById('loginCode').value = '';
+            if (!username || !password) {
+                showNotification('Por favor ingrese usuario y contraseña');
+                return;
+            }
+
+            // Verificar si es el admin
+            if (username === 'admin' && password === 'admin2024') {
+                document.getElementById('loginUsername').value = '';
+                document.getElementById('loginPassword').value = '';
                 window.isAdmin = true;
                 window.currentUser = null;
                 showAdminDashboard();
                 return;
             }
             
-            if (!window.users[code]) {
-                showNotification('Código inválido');
+            // Buscar usuario por nombre de usuario
+            const user = Object.values(window.users).find(u => u.username.toLowerCase() === username.toLowerCase());
+            
+            if (!user) {
+                showNotification('Usuario no encontrado');
                 return;
             }
 
-            document.getElementById('loginCode').value = '';
-            window.currentUser = window.users[code];
+            if (user.password !== password) {
+                showNotification('Contraseña incorrecta');
+                return;
+            }
+
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            window.currentUser = user;
             window.isAdmin = false;
             showUserDashboard();
         }
@@ -875,6 +966,11 @@
 
         // Mostrar dashboard de usuario
         function showUserDashboard() {
+            const container = document.querySelector('.container');
+            container.style.display = 'block';
+            container.style.alignItems = 'flex-start';
+            container.style.minHeight = 'auto';
+            
             document.getElementById('authScreen').classList.add('hidden');
             document.getElementById('userDashboard').classList.remove('hidden');
             document.getElementById('userName').textContent = window.currentUser.username;
@@ -884,6 +980,11 @@
 
         // Mostrar dashboard de admin
         function showAdminDashboard() {
+            const container = document.querySelector('.container');
+            container.style.display = 'block';
+            container.style.alignItems = 'flex-start';
+            container.style.minHeight = 'auto';
+            
             document.getElementById('authScreen').classList.add('hidden');
             document.getElementById('adminDashboard').classList.remove('hidden');
             loadUsersTable();
@@ -893,6 +994,7 @@
         // Actualizar puntos del usuario
         function updateUserPoints() {
             document.getElementById('userPoints').textContent = window.currentUser.points.toFixed(2);
+            document.getElementById('currentAmount').textContent = window.currentUser.originalAmount.toFixed(2);
             loadRewards();
         }
 
@@ -909,8 +1011,8 @@
             window.currentUser.points += (amount * 10);
 
             try {
-                const { ref, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                await update(ref(window.database, 'users/' + window.currentUser.code), {
+                const { ref: dbRef, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await update(dbRef(window.database, 'users/' + window.currentUser.code), {
                     points: window.currentUser.points,
                     originalAmount: window.currentUser.originalAmount
                 });
@@ -954,6 +1056,35 @@
             } catch (error) {
                 console.error('Error al eliminar puntos:', error);
                 showNotification('Error al eliminar puntos. Intenta nuevamente.');
+            }
+        }
+
+        // Editar cantidad original
+        async function editOriginalAmount() {
+            const newAmount = parseFloat(document.getElementById('editAmount').value);
+            
+            if (isNaN(newAmount) || newAmount < 0) {
+                showNotification('Por favor ingrese una cantidad válida');
+                return;
+            }
+
+            const oldAmount = window.currentUser.originalAmount;
+            window.currentUser.originalAmount = newAmount;
+            window.currentUser.points = newAmount * 10;
+
+            try {
+                const { ref: dbRef, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await update(dbRef(window.database, 'users/' + window.currentUser.code), {
+                    points: window.currentUser.points,
+                    originalAmount: window.currentUser.originalAmount
+                });
+                
+                updateUserPoints();
+                document.getElementById('editAmount').value = '';
+                showNotification(`Cantidad actualizada: ${newAmount.toFixed(2)} (Puntos: ${window.currentUser.points.toFixed(2)})`);
+            } catch (error) {
+                console.error('Error al editar cantidad:', error);
+                showNotification('Error al actualizar cantidad. Intenta nuevamente.');
             }
         }
 
@@ -1028,8 +1159,8 @@
             }
             
             try {
-                const { ref, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                await update(ref(window.database, 'users/' + window.currentUser.code), {
+                const { ref: dbRef, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await update(dbRef(window.database, 'users/' + window.currentUser.code), {
                     selectedReward: window.currentUser.selectedReward
                 });
                 
@@ -1048,7 +1179,7 @@
             const usersList = Object.values(window.users);
             
             if (usersList.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay usuarios registrados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No hay usuarios registrados</td></tr>';
                 return;
             }
 
@@ -1092,7 +1223,6 @@
                 
                 row.innerHTML = `
                     <td>${user.username}</td>
-                    <td>${user.code}</td>
                     <td>${user.points.toFixed(2)}</td>
                     <td>${goalInfo}</td>
                     <td>
@@ -1130,8 +1260,8 @@
             user.selectedReward = null;
 
             try {
-                const { ref, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                await update(ref(window.database, 'users/' + code), {
+                const { ref: dbRef, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await update(dbRef(window.database, 'users/' + code), {
                     confirmedRewards: user.confirmedRewards,
                     selectedReward: null
                 });
@@ -1150,8 +1280,8 @@
                 const username = window.users[code].username;
                 
                 try {
-                    const { ref, remove } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                    await remove(ref(window.database, 'users/' + code));
+                    const { ref: dbRef, remove } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                    await remove(dbRef(window.database, 'users/' + code));
                     
                     showNotification(`Usuario ${username} eliminado correctamente`);
                 } catch (error) {
@@ -1179,8 +1309,8 @@
             };
 
             try {
-                const { ref, set } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                await set(ref(window.database, 'rewards/' + rewardId), rewardData);
+                const { ref: dbRef, set } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await set(dbRef(window.database, 'rewards/' + rewardId), rewardData);
 
                 document.getElementById('rewardName').value = '';
                 document.getElementById('rewardPrice').value = '';
@@ -1217,8 +1347,8 @@
         // Eliminar recompensa
         async function deleteReward(id) {
             try {
-                const { ref, remove } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                await remove(ref(window.database, 'rewards/' + id));
+                const { ref: dbRef, remove } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                await remove(dbRef(window.database, 'rewards/' + id));
                 
                 showNotification('Recompensa eliminada');
             } catch (error) {
