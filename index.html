@@ -589,24 +589,7 @@
         <div id="authScreen" class="auth-container">
             <h1>Sistema Ecológico</h1>
             
-            <div id="registerForm">
-                <h2>Crear Cuenta</h2>
-                <div class="form-group">
-                    <label>Nombre de Usuario</label>
-                    <input type="text" id="regUsername" placeholder="Ingrese su nombre de usuario">
-                </div>
-                <div class="form-group">
-                    <label>Contraseña</label>
-                    <div class="password-container">
-                        <input type="password" id="regPassword" placeholder="Ingrese su contraseña">
-                        <button type="button" class="toggle-password" onclick="togglePassword('regPassword', this)">👁️</button>
-                    </div>
-                </div>
-                <button onclick="register()">Crear Cuenta</button>
-                <button class="secondary-btn" onclick="showLogin()">Ya tengo cuenta</button>
-            </div>
-
-            <div id="loginForm" class="hidden">
+            <div id="loginForm">
                 <h2>Iniciar Sesión</h2>
                 <div class="form-group">
                     <label>Nombre de Usuario</label>
@@ -621,6 +604,23 @@
                 </div>
                 <button onclick="login()">Iniciar Sesión</button>
                 <button class="secondary-btn" onclick="showRegister()">Crear nueva cuenta</button>
+            </div>
+
+            <div id="registerForm" class="hidden">
+                <h2>Crear Cuenta</h2>
+                <div class="form-group">
+                    <label>Nombre de Usuario</label>
+                    <input type="text" id="regUsername" placeholder="Ingrese su nombre de usuario">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <div class="password-container">
+                        <input type="password" id="regPassword" placeholder="Ingrese su contraseña">
+                        <button type="button" class="toggle-password" onclick="togglePassword('regPassword', this)">👁️</button>
+                    </div>
+                </div>
+                <button onclick="register()">Crear Cuenta</button>
+                <button class="secondary-btn" onclick="showLogin()">Ya tengo cuenta</button>
             </div>
 
             <div id="adminLoginForm" class="hidden">
@@ -1375,6 +1375,11 @@
 
         // Cerrar sesión
         function logout() {
+            const container = document.querySelector('.container');
+            container.style.display = 'flex';
+            container.style.alignItems = 'center';
+            container.style.minHeight = '100vh';
+            
             window.currentUser = null;
             window.isAdmin = false;
             document.getElementById('authScreen').classList.remove('hidden');
